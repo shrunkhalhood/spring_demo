@@ -47,13 +47,21 @@ stage('Docker Push') {
     }
 }
 
-        stage('Deploy') {
+stage('Deploy') {
     steps {
         sh '''
+            echo "Stopping old container..."
             docker stop $CONTAINER_NAME || true
             docker rm $CONTAINER_NAME || true
+
+            echo "Pulling latest image..."
             docker pull $DOCKER_IMAGE
+
+            echo "Running new container..."
             docker run -d -p 8081:8080 --name $CONTAINER_NAME $DOCKER_IMAGE
+
+            echo "Listing running containers..."
+            docker ps
         '''
     }
 }
