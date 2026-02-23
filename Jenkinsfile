@@ -7,6 +7,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "shrunkhood/springboot-demo"
+        IMAGE_TAG = "${BUILD_NUMBER}"
         CONTAINER_NAME = "springboot-app"
     }
 
@@ -26,32 +27,33 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE .'
+                sh 'docker build -t $DOCKER_IMAGE:$IMAGE_TAG .'
             }
         }
 
         stage('Docker Push') {
-    steps {
-        withCredentials([usernamePassword(
-            credentialsId: 'dockerhub-creds',
-            usernameVariable: 'DOCKER_USER',
-            passwordVariable: 'DOCKER_PASS'
-        )]) {
-            sh '''
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                docker push shrunkhood/springboot-demo
-                docker logout
-            '''
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push $DOCKER_IMAGE:$IMAGE_TAG
+                        docker logout
+                    '''
+                }
+            }
         }
-    }
-}
+
         stage('Deploy') {
             steps {
                 sh '''
                     docker stop $CONTAINER_NAME || true
                     docker rm $CONTAINER_NAME || true
-                    docker pull $DOCKER_IMAGE
-                    docker run -d -p 8081:8080 --name $CONTAINER_NAME $DOCKER_IMAGE
+                    docker pull $DOCKER_IMAGE:$IMAGE_TAG
+                    docker run -d -p 8081:8080 --name $CONTAINER_NAME $DOCKER_IMAGE:$IMAGE_TAG
                 '''
             }
         }
